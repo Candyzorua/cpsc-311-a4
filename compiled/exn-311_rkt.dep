@@ -1,0 +1,1 @@
+("8.6" ta6osx ("e37ec79f1a272417f8b003e9e52cc02e903ecf63" . "38180a95774dd7c294a69f5dddd3db1bc9e80612") (collects #"plai" #"test-harness.rkt") (collects #"racket" #"main.rkt") (collects #"racket" #"runtime-config.rkt") (collects #"rackunit" #"main.rkt"))

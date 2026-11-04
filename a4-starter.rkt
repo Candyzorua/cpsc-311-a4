@@ -489,13 +489,8 @@
 ;; and
 ;; TFA TFA Env lValueCtxt Store -> (list RValue Store)
 (define (add/tfa l r env ectxt store)
-  (match-let* (`(,v1 ,store1)
-               [interp/tfa-acc
-                l
-                env
-                (rValueCtxt)
-                store])
-    [`(,v2 ,store2) (interp/tfa-acc r env (rValueCtxt) store1)]
+  (match-let* ([`(,v1 ,store1) (interp/tfa-acc l env (rValueCtxt) store)]
+               [`(,v2 ,store2) (interp/tfa-acc r env (rValueCtxt) store1)])
     (coerce-rvalue ectxt (add-rvalue v1 v2) store2)))
 
 ;; TFA Env lValueCtxt Store -> (list LValue Store)
@@ -503,15 +498,11 @@
 ;; TFA Env lValueCtxt Store -> (list LValue Store)
 ;; and
 ;; TFA Env lValueCtxt Store -> (list RValue Store)
-(define (nought?/tfa l r env ectxt store)
-  (match-let* (`(,v1 ,store1)
-               [interp/tfa-acc
-                l
-                env
-                (rValueCtxt)
-                store])
-    [`(,v2 ,store2) (interp/tfa-acc r env (rValueCtxt) store1)]
-    (coerce-rvalue ectxt (add-rvalue v1 v2) store2)))
+(define (nought?/tfa e env ectxt store)
+  (match-let ([`(,v1 ,store1) (interp/tfa-acc e env (rValueCtxt) store)])
+    (coerce-rvalue ectxt (boolV (zero? (rvalue->num v1))) store1)))
+
+
 (define apply/tfa (void)) ; stub
 (define fixFun/tfa (void)) ;stub
 (define setobj/tfa (void)) ; stub
@@ -525,8 +516,8 @@
   (type-case TFA
              tfa
              [num (n) (num/tfa n env ectxt store)]
-             [add (l r) (add/tfa n env ectxt store)]
-             [nought? (e) (... (fn-for-tfa e))]
+             [add (l r) (add/tfa l r env ectxt store)]
+             [nought? (e) (nought?/tfa e env ectxt store)]
              [bool (b) (... b)]
              [ifB (p c a) (... (fn-for-tfa p) (fn-for-tfa c) (fn-for-tfa a))]
              [id (x) (... x)]

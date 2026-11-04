@@ -534,14 +534,38 @@
          [store1 (update-store store loc closure)])
     (coerce-rvalue ectxt closure store1)))
 
+;; TFA TFA TFA Env lValueCtxt Store -> (list LValue Store)
+;; and
+;; TFA TFA TFA Env bindingCtxt Store -> (list LValue Store)
+;; and
+;; TFA TFA TFA Env rValueCtxt Store -> (list RValue Store)
 (define (ifB/tfa p c a env ectxt store)
   (match-let* ([`(,vp ,store1) (interp/tfa-acc p env (rValueCtxt) store)]
                [boolp (rvalue->bool vp)])
-      (if boolp
-          (interp/tfa-acc c env ectxt store1)
-          (interp/tfa-acc a env ectxt store1))))
+    (if boolp
+        (interp/tfa-acc c env ectxt store1)
+        (interp/tfa-acc a env ectxt store1))))
 
-(define setobj/tfa (void)) ; stub
+;; Symbol Env Store lValueCtxt  -> (list LValue Store)
+;; and
+;; Symbol Env Store bindingCtxt -> (list LValue Store)
+;; and
+;; Symbol Env Store rValueCtxt  -> (list RValue Store)
+;; produce the value currently associated with the variable x and the context
+(define (id/tfa x env store ectxt)
+  (let ([loc (lookup-env env x)])
+    (type-case EvalContext
+               ectxt
+               [lValueCtxt () (list loc store)]
+               [bindingCtxt () (list loc store)]
+               [rValueCtxt () (list (lookup-store store loc) store)])))
+
+(define (setobj/tfa l r env store ectxt)
+  (match-let* ([`(,vl ,store1) (interp/tfa-acc l env (lValueCtxt) store)]
+               [`(,vr ,store2) (interp/tfa-acc r env (rValueCtxt) store1)]
+               [orig-vl-value (lookup-store store2 vl)]
+               [store3 (update-store store2 vl vr)])
+    (coerce-rvalue ectxt orig-vl-value store3)))
 
 ;; TFA Env lValueCtxt Store -> (list LValue Store)
 ;; and
@@ -556,32 +580,16 @@
              [nought? (e) (nought?/tfa e env ectxt store)]
              [bool (b) (bool/tfa b env ectxt store)]
              [ifB (p c a) (ifB/tfa p c a env ectxt store)]
-             [id (x) (... x)]
-             [setobj (l r) (... (fn-for-tfa l) (fn-for-tfa r))]
+             [id (x) (id/tfa x env store ectxt)]
+             [setobj (l r) (setobj/tfa l r env store ectxt)]
              [fixFun (f x body) (fixFun/tfa f x body env ectxt store)]
              [app (rator rand) (apply/tfa rator rand env ectxt store)]))
-
-;; Note: id/tfa has *three signatures*, one for each possible
-;; result context value, since the result type may vary
-;; depending on the input.  This conjunction of signatures is called
-;; an "intersection type".  Other functions you design may also
-;; have an analogous signature.  This one is provided as an
-;; example
-
-;; Symbol Env Store lValueCtxt  -> (list LValue Store)
-;; and
-;; Symbol Env Store bindingCtxt -> (list LValue Store)
-;; and
-;; Symbol Env Store rValueCtxt  -> (list RValue Store)
-;; produce the value currently associated with the variable x and the context
-(define (id/tfa x env store ectxt)
-  (list (...) empty-store)) ; stub
 
 ;; TFA -> RValue
 ;; interpret the given TFA expression
 ;; EFFECTS: Signals an error in case of runtime type error.
 (define (interp/tfa tfa)
-  (numV 9)) ; stub for the examples
+  (interp/tfa-acc tfa empty-env (rValueCtxt) empty-store))
 
 ;; Using the built-in recursion
 (check-equal? (interp/tfa (with '*

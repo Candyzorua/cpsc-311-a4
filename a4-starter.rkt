@@ -203,6 +203,7 @@
 ;; TID is Symbol
 ;; INVARIANT: a TID cannot be a TFA keyword
 ;; interp.  an identifier in the TFA language
+;; Any -> Boolean
 (define (tid? x)
   (let ([keywords '(+ nought? ifB andB notB with fun fixFun array aref setobj seqn)])
     (and (symbol? x) (not (member x keywords)))))
@@ -253,14 +254,19 @@
 ;;                where x0 does not occur free in expr2
 
 ;; Syntactic sugars
+;; TFA TFA -> TFA
 (define (andB expr1 expr2)
   (let ([x0 (gensym)]) (with x0 expr1 (ifB (id x0) expr2 (bool #f)))))
+;; TFA -> TFA
 (define (notB expr)
   (ifB expr (bool #f) (bool #t)))
+;; Symbol TFA -> TFA
 (define (fun x body)
   (fixFun (gensym) x body))
+;; Symbol TFA TFA -> TFA
 (define (with x named body)
   (app (fun x body) named))
+;; TFA TFA -> TFA
 (define (seqn expr1 expr2)
   (with (gensym) expr1 expr2))
 
@@ -397,6 +403,7 @@
 ;;
 
 ;; Location is Symbol
+;; Any -> Boolean
 (define (location? x)
   (symbol? x))
 
@@ -493,7 +500,7 @@
               (list (boolV #f) empty-store))
 (check-exn/311 (bool/tfa #t empty-env (lValueCtxt) empty-store) "Bad L-Value")
 
-;; (RValue RValue -> RValue)
+;; RValue RValue -> RValue
 ;; sum the numbers represented by v1 and v2
 (define (add-rvalue v1 v2)
   (let ([n1 (rvalue->num v1)]
@@ -571,6 +578,11 @@
          [store1 (update-store store newloc closure)])
     (coerce-rvalue ectxt closure store1)))
 
+;; TFA TFA Env Store lValueCtxt -> (list LValue Store)
+;; and
+;; TFA TFA Env Store bindingCtxt -> (list LValue Store)
+;; and
+;; TFA TFA Env Store rValueCtxt -> (list RValue Store)
 (define (setobj/tfa l r env store ectxt)
   (match-let* ([`(,vl ,store1) (interp/tfa-acc l env (lValueCtxt) store)]
                [`(,vr ,store2) (interp/tfa-acc r env (rValueCtxt) store1)]
@@ -578,6 +590,11 @@
                [store3 (update-store store2 vl vr)])
     (coerce-rvalue ectxt orig-vl-value store3)))
 
+;; TFA Env lValueCtxt Store -> (list LValue Store)
+;; and
+;; TFA Env bindingCtxt Store -> (list LValue Store)
+;; and
+;; TFA Env rValueCtxt Store -> (list RValue Store)
 (define (interp/tfa-acc tfa env ectxt store)
   (type-case TFA
              tfa

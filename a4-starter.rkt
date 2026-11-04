@@ -534,6 +534,13 @@
          [store1 (update-store store loc closure)])
     (coerce-rvalue ectxt closure store1)))
 
+(define (ifB/tfa p c a env ectxt store)
+  (match-let* ([`(,vp ,store1) (interp/tfa-acc p env (rValueCtxt) store)]
+               [boolp (rvalue->bool vp)])
+      (if boolp
+          (interp/tfa-acc c env ectxt store1)
+          (interp/tfa-acc a env ectxt store1))))
+
 (define setobj/tfa (void)) ; stub
 
 ;; TFA Env lValueCtxt Store -> (list LValue Store)
@@ -548,10 +555,10 @@
              [add (l r) (add/tfa l r env ectxt store)]
              [nought? (e) (nought?/tfa e env ectxt store)]
              [bool (b) (bool/tfa b env ectxt store)]
-             [ifB (p c a) (... (fn-for-tfa p) (fn-for-tfa c) (fn-for-tfa a))]
+             [ifB (p c a) (ifB/tfa p c a env ectxt store)]
              [id (x) (... x)]
              [setobj (l r) (... (fn-for-tfa l) (fn-for-tfa r))]
-             [fixFun (f x body) (... f x (fn-for-tfa body))]
+             [fixFun (f x body) (fixFun/tfa f x body env ectxt store)]
              [app (rator rand) (apply/tfa rator rand env ectxt store)]))
 
 ;; Note: id/tfa has *three signatures*, one for each possible

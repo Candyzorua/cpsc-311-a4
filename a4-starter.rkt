@@ -519,7 +519,7 @@
   (match-let* ([`(,vrator ,store1) (interp/tfa-acc rator env (rValueCtxt) store)]
                [`(,vrand ,store2) (interp/tfa-acc rand env (bindingCtxt) store1)]
                [(funV param body closure-env) (rvalue->fun vrator)]
-               [(extended-env) (extend-env closure-env param vrand)])
+               [extended-env (extend-env closure-env param vrand)])
     (interp/tfa-acc body extended-env ectxt store2)))
 
 ;; Symbol Symbol TFA Env lValueCtxt Store -> (list LValue Store)
@@ -531,7 +531,7 @@
   (let* ([newloc (gensym)]
          [extended-env (extend-env env f newloc)]
          [closure (funV x body extended-env)]
-         [store1 (update-store store loc closure)])
+         [store1 (update-store store newloc closure)])
     (coerce-rvalue ectxt closure store1)))
 
 ;; TFA TFA TFA Env lValueCtxt Store -> (list LValue Store)
@@ -589,7 +589,8 @@
 ;; interpret the given TFA expression
 ;; EFFECTS: Signals an error in case of runtime type error.
 (define (interp/tfa tfa)
-  (interp/tfa-acc tfa empty-env (rValueCtxt) empty-store))
+  (match-let* ([`(,v^ ,store^) (interp/tfa-acc tfa empty-env (rValueCtxt) empty-store)])
+    v^))
 
 ;; Using the built-in recursion
 (check-equal? (interp/tfa (with '*

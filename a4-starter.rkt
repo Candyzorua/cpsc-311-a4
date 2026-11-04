@@ -28,14 +28,14 @@
 ;; Due:      Friday, November 7, 2026 10pm (for +1 bonus), Sunday, Nov 9th 10pm otherwise
 
 ;; Student 1;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Name:
-;; Student Number:
-;; CWL:
+;; Name: Jiaying Ong
+;; Student Number: 83656967
+;; CWL: jong01
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Student 2;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Name:
-;; Student Number:
-;; CWL:
+;; Name: Peter Gu
+;; Student Number: 62622386
+;; CWL: pgu04
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; Truth!Falsehood!Assignment! (TFA):

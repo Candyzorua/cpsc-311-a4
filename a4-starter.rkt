@@ -476,6 +476,14 @@
 (define (num/tfa n env ectxt store)
   (coerce-rvalue ectxt (numV n) store))
 
+;; Boolean Env lValueCtxt Store -> (list LValue Store)
+;; and
+;; Boolean Env bindingCtxt Store -> (list LValue Store)
+;; and
+;; Boolean Env rValueCtxt Store -> (list RValue Store)
+(define (bool/tfa b env ectxt store)
+  (coerce-rvalue ectxt (boolV b) store))
+
 ;; (RValue RValue -> RValue)
 ;; sum the numbers represented by v1 and v2
 (define (add-rvalue v1 v2)
@@ -512,9 +520,20 @@
                [`(,vrand ,store2) (interp/tfa-acc rand env (bindingCtxt) store1)]
                [(funV param body closure-env) (rvalue->fun vrator)]
                [(extended-env) (extend-env closure-env param vrand)])
-               (interp/tfa-acc body extended-env ectxt store2)))
-               
-(define fixFun/tfa (void)) ;stub
+    (interp/tfa-acc body extended-env ectxt store2)))
+
+;; Symbol Symbol TFA Env lValueCtxt Store -> (list LValue Store)
+;; and
+;; Symbol Symbol TFA Env bindingCtxt Store -> (list LValue Store)
+;; and
+;; Symbol Symbol TFA Env rValueCtxt Store -> (list RValue Store)
+(define (fixFun/tfa f x body env ectxt store)
+  (let* ([newloc (gensym)]
+         [extended-env (extend-env env f newloc)]
+         [closure (funV x body extended-env)]
+         [store1 (update-store store loc closure)])
+    (coerce-rvalue ectxt closure store1)))
+
 (define setobj/tfa (void)) ; stub
 
 ;; TFA Env lValueCtxt Store -> (list LValue Store)
@@ -528,7 +547,7 @@
              [num (n) (num/tfa n env ectxt store)]
              [add (l r) (add/tfa l r env ectxt store)]
              [nought? (e) (nought?/tfa e env ectxt store)]
-             [bool (b) (... b)]
+             [bool (b) (bool/tfa b env ectxt store)]
              [ifB (p c a) (... (fn-for-tfa p) (fn-for-tfa c) (fn-for-tfa a))]
              [id (x) (... x)]
              [setobj (l r) (... (fn-for-tfa l) (fn-for-tfa r))]

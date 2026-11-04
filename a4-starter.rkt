@@ -470,9 +470,9 @@
 
 ;; Number Env lValueCtxt Store -> (list LValue Store)
 ;; and
-;; Number Env lValueCtxt Store -> (list LValue Store)
+;; Number Env bindingCtxt Store -> (list LValue Store)
 ;; and
-;; Number Env lValueCtxt Store -> (list RValue Store)
+;; Number Env rValueCtxt Store -> (list RValue Store)
 (define (num/tfa n env ectxt store)
   (coerce-rvalue ectxt (numV n) store))
 
@@ -485,9 +485,9 @@
 
 ;; TFA TFA Env lValueCtxt Store -> (list LValue Store)
 ;; and
-;; TFA TFA Env lValueCtxt Store -> (list LValue Store)
+;; TFA TFA Env bindingCtxt Store -> (list LValue Store)
 ;; and
-;; TFA TFA Env lValueCtxt Store -> (list RValue Store)
+;; TFA TFA Env rValueCtxt Store -> (list RValue Store)
 (define (add/tfa l r env ectxt store)
   (match-let* ([`(,v1 ,store1) (interp/tfa-acc l env (rValueCtxt) store)]
                [`(,v2 ,store2) (interp/tfa-acc r env (rValueCtxt) store1)])
@@ -495,15 +495,25 @@
 
 ;; TFA Env lValueCtxt Store -> (list LValue Store)
 ;; and
-;; TFA Env lValueCtxt Store -> (list LValue Store)
+;; TFA Env bindingCtxt Store -> (list LValue Store)
 ;; and
-;; TFA Env lValueCtxt Store -> (list RValue Store)
+;; TFA Env rValueCtxt Store -> (list RValue Store)
 (define (nought?/tfa e env ectxt store)
   (match-let ([`(,v1 ,store1) (interp/tfa-acc e env (rValueCtxt) store)])
     (coerce-rvalue ectxt (boolV (zero? (rvalue->num v1))) store1)))
 
-
-(define apply/tfa (void)) ; stub
+;; TFA TFA Env lValueCtxt Store -> (list LValue Store)
+;; and
+;; TFA TFA Env bindingCtxt Store -> (list LValue Store)
+;; and
+;; TFA TFA Env rValueCtxt Store -> (list RValue Store)
+(define (apply/tfa rator rand env ectxt store)
+  (match-let* ([`(,vrator ,store1) (interp/tfa-acc rator env (rValueCtxt) store)]
+               [`(,vrand ,store2) (interp/tfa-acc rand env (bindingCtxt) store1)]
+               [(funV param body closure-env) (rvalue->fun vrator)]
+               [(extended-env) (extend-env closure-env param vrand)])
+               (interp/tfa-acc body extended-env ectxt store2)))
+               
 (define fixFun/tfa (void)) ;stub
 (define setobj/tfa (void)) ; stub
 
@@ -523,7 +533,7 @@
              [id (x) (... x)]
              [setobj (l r) (... (fn-for-tfa l) (fn-for-tfa r))]
              [fixFun (f x body) (... f x (fn-for-tfa body))]
-             [app (rator rand) (... (fn-for-tfa rator) (fn-for-tfa rand))]))
+             [app (rator rand) (apply/tfa rator rand env ectxt store)]))
 
 ;; Note: id/tfa has *three signatures*, one for each possible
 ;; result context value, since the result type may vary

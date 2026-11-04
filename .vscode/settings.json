@@ -1,3 +1,6 @@
 {
-    "r.lsp.promptToInstall": false
+    "r.lsp.promptToInstall": false,
+    "[racket]": {
+        "editor.defaultFormatter": "lishizhen.racket-fmt"
+    }
 }

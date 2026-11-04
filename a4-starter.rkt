@@ -4,23 +4,22 @@
 (require "exn-311.rkt")
 (require "parsing.rkt")
 
-(define (... . args) (cons '... args)) ;; enables us to use ... in templates
+(define (... . args)
+  (cons '... args)) ;; enables us to use ... in templates
 
 ;; Your submission must provide exactly these identifiers
 ;; DO NOT MODIFY THE PROVIDE DIRECTIVE!!!
 ;; Instead, use stub definitions for the functions to suppress errors
-(provide
- add/tfa
- nought?/tfa
- apply/tfa
- fixFun/tfa
- id/tfa
- setobj/tfa
- interp/tfa-acc
- interp/tfa
- parse/tfa)
+(provide add/tfa
+         nought?/tfa
+         apply/tfa
+         fixFun/tfa
+         id/tfa
+         setobj/tfa
+         interp/tfa-acc
+         interp/tfa
+         parse/tfa)
 (provide (all-defined-out))
-
 
 ;; CPSC311
 ;; Assignment 4: Not To Be Confused With Two-Factor Authentication
@@ -29,14 +28,14 @@
 ;; Due:      Friday, November 7, 2026 10pm (for +1 bonus), Sunday, Nov 9th 10pm otherwise
 
 ;; Student 1;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Name: 
-;; Student Number: 
-;; CWL: 
+;; Name:
+;; Student Number:
+;; CWL:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Student 2;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Name: 
-;; Student Number: 
-;; CWL: 
+;; Name:
+;; Student Number:
+;; CWL:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; Truth!Falsehood!Assignment! (TFA):
@@ -47,32 +46,24 @@
 ;; - first-class (recursive) functions
 ;; - mutable variables
 
-
 ;; The TFA language is an effectful strict language with mutable variables
 ;; and by-reference semantics.  Here are some salient aspects of its design
-
 
 ;; 1) BOOLEANS
 ;; Finally some Booleans!  The ifB language feature lets us branch on Booleans,
 ;; e.g.:
-#;
-'{ifB #t 7 9}
+#;'{ifB #t 7 9}
 ;; evaluates to 7
 
 ;; ifB is insistent about branching on Booleans:  any other kind of value in
 ;; predicate position signals an error, like:
-#;
-'{ifB 7 #t 9}
+#;'{ifB 7 #t 9}
 
 ;; Naturally the language has identifier binding, and an expression like
-#;
-'{with {a #t}
-       {ifB a 7 9}}
+#;'{with {a #t} {ifB a 7 9}}
 ;; also evaluates to 7 while
 
-#;
-'{with {a 7}
-       {ifB a #t 9}}
+#;'{with {a 7} {ifB a #t 9}}
 ;; also signals an error
 
 ;; The language has short-circuiting conjunction (andB) and negation (notB),
@@ -81,32 +72,20 @@
 ;; One can also convert a number to a Boolean using nought?, which is TFA's
 ;; analogue to PLAI's zero?.  However, like ifB, nought? only produces a value
 ;; if its argument evaluates to a number, so:
-#;
-'{with {a {fun {b} b}}
-       {nought? a}}
+#;'{with {a {fun {b} b}} {nought? a}}
 ;; yields a runtime error.
-
 
 ;; BY-REFERENCE SEMANTICS:
 
 ;; As regards variables and mutation, TFA features call-by-reference semantics.
 ;; For example, the expression (where setobj in this example acts like Hannah's
 ;; setvar):
-#;
-'{with {a 5}
-       {with {b a}
-             {seqn {setobj b 7}
-                   a}}}
+#;'{with {a 5} {with {b a} {seqn {setobj b 7} a}}}
 
 ;; produces 7 because b and a are bound to the same location.
 ;; translating the inner with into the equivalent function application
 ;; yields the same result:
-#;
-'{with {a 5}
-       {{fun {b}
-             {seqn {setobj b 7}
-                   a}}
-        a}}
+#;'{with {a 5} {{fun {b} {seqn {setobj b 7} a}} a}}
 ;; since with expressions and function application have similar semantics.
 
 ;; TFA is rather comprehensive in its by-reference semantics.
@@ -114,40 +93,24 @@
 ;; any with expression whose named expression ultimately evaluates a
 ;; variable to produce its "result" will bind the identifier by-reference.
 ;; Here is an example using a conditional expression:
-#;
-'{with {a 5}
-       {with {b 6}
-             {with {c {ifB #t a b}}
-                   {seqn {setobj c 7}
-                         a}}}}
+#;'{with {a 5} {with {b 6} {with {c {ifB #t a b}} {seqn {setobj c 7} a}}}}
 ;; The ifB (boolean if) expression ultimately binds c by-reference to a,
 ;; so they alias, and the expression yields 7.
 
-
 ;; This behaviour even applies to function applications where the function body
 ;; ultimately yields a variable (i.e. "return-by-reference"):
-#;
-'{with {a 5}
-       {with {f {fun {b} a}}
-             {with {c {f 6}}
-                   {seqn {setobj c 7}
-                         a}}}}
+#;'{with {a 5} {with {f {fun {b} a}} {with {c {f 6}} {seqn {setobj c 7} a}}}}
 
 ;; Since the call to f in the with expression yields a, it is bound by-reference
 ;; to c and, yet again, our expression yields 7.
 
 ;; This even applies to a function that yields a locally-bound variable, though
 ;; this takes a little more work to interrogate
-#;
-'{with {f {fun {a} {fun {b} a}}}
-       {with {g {f 9}}
-             {with {d {g 2}}
-                   {with {c {g 3}}
-                         {seqn {setobj c 7}
-                               d}}}}}
+#;'{with
+    {f {fun {a} {fun {b} a}}}
+    {with {g {f 9}} {with {d {g 2}} {with {c {g 3}} {seqn {setobj c 7} d}}}}}
 
 ;; You guessed it: lucky number 7!
-
 
 ;; FLEXIBLE ASSIGNMENT: L-VALUES AND R-VALUES
 
@@ -155,42 +118,26 @@
 ;; be an identifier.  TFA is far more flexible:  any expression whose final
 ;; result yields an identifier is a legal first argument to setobj.
 ;; For instance:
-#;
-'{with {a 5}
-       {with {b 6}
-             {seqn {setobj {ifB #t a b} 7}
-                   a}}}
+#;'{with {a 5} {with {b 6} {seqn {setobj {ifB #t a b} 7} a}}}
 ;; produces 7!
 
 ;; Even function applications are fair game:
-#;
-'{with {f {fun {a} {fun {b} a}}}
-       {with {g {f 9}}
-             {with {d {g 2}}
-                   {seqn {setobj {g 3} 7}
-                         d}}}}
+#;'{with {f {fun {a} {fun {b} a}}} {with {g {f 9}} {with {d {g 2}} {seqn {setobj {g 3} 7} d}}}}
 ;; So much 7!
 
 ;; Of course attempting to set something that is not a variable
 ;; will produce an error, e.g.:
-#;
-'{with {f {fun {a} 6}}
-       {seqn {setobj {f 2} 7}
-             12}}
+#;'{with {f {fun {a} 6}} {seqn {setobj {f 2} 7} 12}}
 
 ;; TFA's setobj, like Hannah's returns the value in the given location at the
 ;; moment of setting.  Since the result of setobj is an R-Value, the following
 ;; program also produces an error:
-#;
-{with {x 9}
-      {seqn {setobj {setobj {setobj x 7} 9} 7}
-            x}}
+#;{with {x 9} {seqn {setobj {setobj {setobj x 7} 9} 7} x}}
 
 ;; An alternative specification of setobj could have had it return the
 ;; location being set rather than the current value in that location.
 ;; Were that the case, the result of the above program would have
 ;; been 7.  But this legal TFA program does not yield 7.
-
 
 ;; WHAT IS THIS WITCHCRAFT?!?
 
@@ -237,16 +184,14 @@
 ;; applies for each call, based on the outer expression making the recursive
 ;; calls, as well as that outer expression's context itself, when relevant.
 
-
 ;; NOTE ON SELF-REFERENCE:
 
 ;; This interpreter implements fixFun directly, and then implements
-;; fun in terms of it. 
+;; fun in terms of it.
 ;; Notice that Env just binds identifiers to locations and
 ;; Store just binds locations to R-Values.  This is because
 ;; interp-fixFun will not need anything like a blackhole to be implemented.
 ;; The implementation is compact and clean.
-
 
 ;; YOUR MISSION:
 
@@ -255,35 +200,28 @@
 ;; infrastructure.  This is an opportunity for you to design much of the
 ;; interpreter yourself.
 
-
-
 ;; TID is Symbol
 ;; INVARIANT: a TID cannot be a TFA keyword
 ;; interp.  an identifier in the TFA language
 (define (tid? x)
-  (let ([keywords
-         '(+ nought? ifB andB notB with fun fixFun array aref setobj seqn)])
-    (and (symbol? x)
-         (not
-          (member x keywords)))))
+  (let ([keywords '(+ nought? ifB andB notB with fun fixFun array aref setobj seqn)])
+    (and (symbol? x) (not (member x keywords)))))
 
 (define TID0 'a)
 (define TID1 'b)
 
 ;; No template: atomic data
 
-
-
-(define-type TFA    
-  [num (n number?)]
-  [add (lhs TFA?) (rhs TFA?)]
-  [nought? (arg TFA?)]
-  [bool (b boolean?)]
-  [ifB (pred TFA?) (conseq TFA?) (altern TFA?)]
-  [id (name tid?)]
-  [setobj (l TFA?) (r TFA?)] 
-  [fixFun (self tid?) (param tid?) (body TFA?)]
-  [app (rator TFA?) (rand TFA?)])
+(define-type TFA
+             [num (n number?)]
+             [add (lhs TFA?) (rhs TFA?)]
+             [nought? (arg TFA?)]
+             [bool (b boolean?)]
+             [ifB (pred TFA?) (conseq TFA?) (altern TFA?)]
+             [id (name tid?)]
+             [setobj (l TFA?) (r TFA?)]
+             [fixFun (self tid?) (param tid?) (body TFA?)]
+             [app (rator TFA?) (rand TFA?)])
 ;; interp. expressions in the TFA language.
 ;; Its syntax is defined by the following BNF:
 ;; <TFA> ::=
@@ -316,21 +254,21 @@
 
 ;; Syntactic sugars
 (define (andB expr1 expr2)
-  (let ([x0 (gensym)])
-    (with x0 expr1 (ifB (id x0) expr2 (bool #f)))))
-(define (notB expr) (ifB expr (bool #f) (bool #t)))
-(define (fun x body) (fixFun (gensym) x body))
-(define (with x named body) (app (fun x body) named))
-(define (seqn expr1 expr2) (with (gensym) expr1 expr2))
-
+  (let ([x0 (gensym)]) (with x0 expr1 (ifB (id x0) expr2 (bool #f)))))
+(define (notB expr)
+  (ifB expr (bool #f) (bool #t)))
+(define (fun x body)
+  (fixFun (gensym) x body))
+(define (with x named body)
+  (app (fun x body) named))
+(define (seqn expr1 expr2)
+  (with (gensym) expr1 expr2))
 
 (define AE1 (num 4))
 (define AE2 (add AE1 (num 5)))
 
 (define WAES4 '{with {x {+ 5 5}} {with {y {+ x -3}} {+ y y}}})
-(define WAE4 (with 'x (add (num 5) (num 5))
-                   (with 'y (add (id 'x) (num -3))
-                         (add (id 'y) (id 'y)))))
+(define WAE4 (with 'x (add (num 5) (num 5)) (with 'y (add (id 'x) (num -3)) (add (id 'y) (id 'y)))))
 
 (define WAES5 '{with {x 5} {+ x {with {x 3} 10}}})
 (define WAE5 (with 'x (num 5) (add (id 'x) (with 'x (num 3) (num 10)))))
@@ -350,47 +288,34 @@
 (define FWAES3 '{fun {x} {+ x y}})
 (define FWAE3 (fun 'x (add (id 'x) (id 'y))))
 
-(define FFWAES6
-  '{with {down {fixFun f {x} {if0 x 9 {f {+ x -1}}}}}
-         {down 1}})
+(define FFWAES6 '{with {down {fixFun f {x} {if0 x 9 {f {+ x -1}}}}} {down 1}})
 
 (define FFWAE6
   (app (fun 'down (app (id 'down) (num 1)))
-       (fixFun 'f 'x (ifB (nought? (id 'x))
-                          (num 9)
-                          (app (id 'f) (add (id 'x) (num -1)))))))
+       (fixFun 'f 'x (ifB (nought? (id 'x)) (num 9) (app (id 'f) (add (id 'x) (num -1)))))))
 
+#;(define (fn-for-tfa f)
+    (type-case TFA
+               f
+               [num (n) (... n)]
+               [add (l r) (... (fn-for-tfa l) (fn-for-tfa r))]
+               [nought? (e) (... (fn-for-tfa e))]
+               [bool (b) (... b)]
+               [ifB (p c a) (... (fn-for-tfa p) (fn-for-tfa c) (fn-for-tfa a))]
+               [id (x) (... x)]
+               [setobj (l r) (... (fn-for-tfa l) (fn-for-tfa r))]
+               [fixFun (f x body) (... f x (fn-for-tfa body))]
+               [app (rator rand) (... (fn-for-tfa rator) (fn-for-tfa rand))]))
 
-#;
-(define (fn-for-tfa f)
-  (type-case TFA f
-    [num (n) (... n)]
-    [add (l r) (... (fn-for-tfa l)
-                    (fn-for-tfa r))]
-    [nought? (e) (... (fn-for-tfa e))]
-    [bool (b) (... b)]
-    [ifB (p c a)
-         (... (fn-for-tfa p)
-              (fn-for-tfa c)
-              (fn-for-tfa a))]
-    [id (x) (... x)]
-    [setobj (l r) (... (fn-for-tfa l)
-                       (fn-for-tfa r))]
-    [fixFun (f x body) (... f x (fn-for-tfa body))]
-    [app (rator rand) (... (fn-for-tfa rator)
-                           (fn-for-tfa rand))]))
-
-#;
-(define (fn-for-lotfa elems)
-  (local [(define for-empty (...))
-          (define (for-cons tfa rlotfa) (... tfa rlotfa))]          
-    (foldr for-empty for-cons elems)))
-
+#;(define (fn-for-lotfa elems)
+    (local [(define for-empty (...))
+            (define (for-cons tfa rlotfa)
+              (... tfa rlotfa))]
+           (foldr for-empty for-cons elems)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Interpretation
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 
 ;;
 ;; Procedural Symbol Tables
@@ -400,7 +325,6 @@
 ;; (symtabof X) is symbol -> X
 ;; interp.  bindings of identifiers to objects of type X
 ;; Effect: signals an error if given symbol has no binding
-
 
 ;; extend-symtab : (symtabof X) symbol X -> (symtabof X)
 (define (extend-symtab symtab x0 v)
@@ -412,8 +336,8 @@
 ;; lookup: (symtabof X) symbol -> X
 ;; produce the binding associated with the given symbol
 ;; Effect: Signal an error if the given symbol has no binding
-(define (lookup-symtab symtab x) (symtab x))
-
+(define (lookup-symtab symtab x)
+  (symtab x))
 
 ;;
 ;; Environments as symbol tables (just a wrapper)
@@ -425,8 +349,7 @@
 ;; empty-env : (envof X)
 ;; an empty environment for lexical scoping (note the custom error msg)
 ;; Effect: signals an error if variable is not there
-(define empty-env
-  (lambda (x) (error/311 'lookup-env "Unbound variable: ~a" x)))
+(define empty-env (lambda (x) (error/311 'lookup-env "Unbound variable: ~a" x)))
 
 ;; (envof X) symbol X -> (envOf X)
 (define extend-env extend-symtab)
@@ -436,19 +359,17 @@
 ;; Effect: Signal an error if the given symbol has no binding
 (define lookup-env lookup-symtab)
 
-
 ;;
 ;; Stores as symbol tables (just a wrapper)
 ;;
 
 ;; (storeof X) is (symtabof X)
-;; interp.  stores represent bindings of locations to mutable values 
+;; interp.  stores represent bindings of locations to mutable values
 
 ;; (storeof X)
 ;; an empty store for mutable locations (note the custom error msg)
 ;; Effect: signals an error if location is not there
-(define empty-store
-  (lambda (x) (error/311 'lookup-store "Unbound store location: ~a" x)))
+(define empty-store (lambda (x) (error/311 'lookup-store "Unbound store location: ~a" x)))
 
 ;; (storeof X) symbol X -> (envOf X)
 (define update-store extend-symtab)
@@ -458,11 +379,7 @@
 ;; Effect: Signal an error if the given symbol has no binding
 (define lookup-store lookup-symtab)
 
-
-(define-type EvalContext
-  [lValueCtxt]
-  [bindingCtxt]
-  [rValueCtxt])
+(define-type EvalContext [lValueCtxt] [bindingCtxt] [rValueCtxt])
 ;; interp. the kind of context in which an expression is being evaluated.
 ;; lValueCtxt means the result of evaluating the current expression will
 ;;   be the first argument to a surrounding setobj expression;
@@ -470,35 +387,30 @@
 ;;   1) the operand position of a function application, or
 ;;   2) the named expression position of a with expression;
 ;; rValueCtxt means the result of the evaluating the current expression is
-;;   neither lValueCtxt nor bindingCtxt; 
+;;   neither lValueCtxt nor bindingCtxt;
 
-#;
-(define (fn-for-ectxt ectxt)
-  (type-case EvalContext
-    [lValueCtxt () (...)]
-    [bindingCtxt () (...)]
-    [rValueCtxt () (...)]))
+#;(define (fn-for-ectxt ectxt)
+    (type-case EvalContext [lValueCtxt () (...)] [bindingCtxt () (...)] [rValueCtxt () (...)]))
 
 ;;
 ;; Interpreter Values
 ;;
 
-
 ;; Location is Symbol
-(define (location? x) (symbol? x))
+(define (location? x)
+  (symbol? x))
 
 ;; LValue is Location
-;; interp.  Represents a potential "left side of set-obj" value 
+;; interp.  Represents a potential "left side of set-obj" value
 
 (define LV1 'l1)
 (define LV2 'l2)
 
-
 (define-type RValue
-  [numV (n number?)]
-  [boolV (b boolean?)]
-  [funV (param symbol?) (body TFA?) (env procedure?)])
-;; interp.  Represents a potential "right side of set-obj" value 
+             [numV (n number?)]
+             [boolV (b boolean?)]
+             [funV (param symbol?) (body TFA?) (env procedure?)])
+;; interp.  Represents a potential "right side of set-obj" value
 
 (define RV1 (numV 7))
 (define RV2 (funV 'x (id 'x) empty-env))
@@ -509,45 +421,34 @@
 ;; RValue -> Number
 ;; Effect: signal error unless rv is a number
 (define (rvalue->num rv)
-  (type-case RValue rv
-    [numV (n) n]
-    [else (error/311 'interp/tfa "Bad number: ~a" rv)]))
+  (type-case RValue rv [numV (n) n] [else (error/311 'interp/tfa "Bad number: ~a" rv)]))
 
 ;; RValue -> Boolean
 ;; Effect: signal error unless rv is a boolean
 (define (rvalue->bool rv)
-  (type-case RValue rv
-    [boolV (b) b]
-    [else (error/311 'interp/tfa "Bad Boolean: ~a" rv)]))
+  (type-case RValue rv [boolV (b) b] [else (error/311 'interp/tfa "Bad Boolean: ~a" rv)]))
 
 ;; RValue -> RValue
 ;; Effect: signal error unless rv is a function
 (define (rvalue->fun rv)
-  (type-case RValue rv
-    [funV (param body env) rv]
-    [else (error/311 'interp/tfa "Bad function: ~a" rv)]))
+  (type-case RValue
+             rv
+             [funV (param body env) rv]
+             [else (error/311 'interp/tfa "Bad function: ~a" rv)]))
 
-#;
-(define (fn-for-rvalue v)
-  (type-case RValue v
-    [numV (n) (... n)]
-    [boolV (b) (... b)]
-    [funV (x body env) (... x
-                            (fn-for-tfa body)
-                            env)]))
-          
-
-
+#;(define (fn-for-rvalue v)
+    (type-case RValue
+               v
+               [numV (n) (... n)]
+               [boolV (b) (... b)]
+               [funV (x body env) (... x (fn-for-tfa body) env)]))
 
 ;;
 ;; Concrete Environment and Store Datatypes
 ;;
 
-
 ;; Env is (envof Location)
 ;; Store is (storeof RValue)
-
-
 
 ;;
 ;; Interpretation Functions
@@ -561,11 +462,11 @@
 ;; produce the kind of value appropriate for the given result context
 ;; Effect: signal an error in case of context mismatch
 (define (coerce-rvalue ectxt rv store)
-  (type-case EvalContext ectxt
-    [lValueCtxt () (error/311 'interp/tfa "Bad L-Value: ~a" rv)]
-    [bindingCtxt () (let ([l (gensym)])
-                      (list l (update-store store l rv)))]
-    [rValueCtxt () (list rv store)]))
+  (type-case EvalContext
+             ectxt
+             [lValueCtxt () (error/311 'interp/tfa "Bad L-Value: ~a" rv)]
+             [bindingCtxt () (let ([l (gensym)]) (list l (update-store store l rv)))]
+             [rValueCtxt () (list rv store)]))
 
 ;; Number Env lValueCtxt Store -> (list LValue Store)
 ;; and
@@ -577,7 +478,6 @@
 
 ;; (RValue RValue -> RValue)
 ;; sum the numbers represented by v1 and v2
-;; Effect: signal an error if either argument does not represent a number
 (define (add-rvalue v1 v2)
   (let ([n1 (rvalue->num v1)]
         [n2 (rvalue->num v2)])
@@ -589,12 +489,29 @@
 ;; and
 ;; TFA TFA Env lValueCtxt Store -> (list RValue Store)
 (define (add/tfa l r env ectxt store)
-   (match-let*
-     [`(,v1 ,store1) (interp/tfa-acc l env (rValueCtxt) store)]
-     [`(,v2 ,store2) (interp/tfa-acc r env (rValueCtxt) store1)]
-        (coerce-rvalue ectxt (add-rvalue v1 v2) store2)))
-  
-(define nought?/tfa (void)) ; stub
+  (match-let* (`(,v1 ,store1)
+               [interp/tfa-acc
+                l
+                env
+                (rValueCtxt)
+                store])
+    [`(,v2 ,store2) (interp/tfa-acc r env (rValueCtxt) store1)]
+    (coerce-rvalue ectxt (add-rvalue v1 v2) store2)))
+
+;; TFA Env lValueCtxt Store -> (list LValue Store)
+;; and
+;; TFA Env lValueCtxt Store -> (list LValue Store)
+;; and
+;; TFA Env lValueCtxt Store -> (list RValue Store)
+(define (nought?/tfa l r env ectxt store)
+  (match-let* (`(,v1 ,store1)
+               [interp/tfa-acc
+                l
+                env
+                (rValueCtxt)
+                store])
+    [`(,v2 ,store2) (interp/tfa-acc r env (rValueCtxt) store1)]
+    (coerce-rvalue ectxt (add-rvalue v1 v2) store2)))
 (define apply/tfa (void)) ; stub
 (define fixFun/tfa (void)) ;stub
 (define setobj/tfa (void)) ; stub
@@ -604,22 +521,18 @@
 ;; TFA Env bindingCtxt Store -> (list LValue Store)
 ;; and
 ;; TFA Env rValueCtxt Store -> (list RValue Store)
-(define (interp/tfa-acc tfa env ectxt store) 
-  (type-case TFA tfa
-    [num (n) (num/tfa n env ectxt store)]
-    [add (l r) (add/tfa n env ectxt store)]
-    [nought? (e) (... (fn-for-tfa e))]
-    [bool (b) (... b)]
-    [ifB (p c a)
-         (... (fn-for-tfa p)
-              (fn-for-tfa c)
-              (fn-for-tfa a))]
-    [id (x) (... x)]
-    [setobj (l r) (... (fn-for-tfa l)
-                       (fn-for-tfa r))]
-    [fixFun (f x body) (... f x (fn-for-tfa body))]
-    [app (rator rand) (... (fn-for-tfa rator)
-                           (fn-for-tfa rand))]))
+(define (interp/tfa-acc tfa env ectxt store)
+  (type-case TFA
+             tfa
+             [num (n) (num/tfa n env ectxt store)]
+             [add (l r) (add/tfa n env ectxt store)]
+             [nought? (e) (... (fn-for-tfa e))]
+             [bool (b) (... b)]
+             [ifB (p c a) (... (fn-for-tfa p) (fn-for-tfa c) (fn-for-tfa a))]
+             [id (x) (... x)]
+             [setobj (l r) (... (fn-for-tfa l) (fn-for-tfa r))]
+             [fixFun (f x body) (... f x (fn-for-tfa body))]
+             [app (rator rand) (... (fn-for-tfa rator) (fn-for-tfa rand))]))
 
 ;; Note: id/tfa has *three signatures*, one for each possible
 ;; result context value, since the result type may vary
@@ -634,36 +547,27 @@
 ;; and
 ;; Symbol Env Store rValueCtxt  -> (list RValue Store)
 ;; produce the value currently associated with the variable x and the context
-(define (id/tfa x env store ectxt) (list (...) empty-store)) ; stub
-
-
-
-
-
+(define (id/tfa x env store ectxt)
+  (list (...) empty-store)) ; stub
 
 ;; TFA -> RValue
 ;; interpret the given TFA expression
 ;; EFFECTS: Signals an error in case of runtime type error.
-(define (interp/tfa tfa) (numV 9)) ; stub for the examples
-
-
-
+(define (interp/tfa tfa)
+  (numV 9)) ; stub for the examples
 
 ;; Using the built-in recursion
-(check-equal?
- (interp/tfa
-  (with '* (fixFun 'mult 'lhs
-                   (fun 'rhs
-                        (ifB  (nought? (id 'rhs))
-                              (num 0)
-                              (add (id 'lhs) (app (app (id 'mult)
-                                                       (id 'lhs))
-                                                  (add (id 'rhs)
-                                                       (num -1)))))))
-        (app (app (id '*)
-                  (num 20))
-             (num 3))))
- (numV 60))
+(check-equal? (interp/tfa (with '*
+                                (fixFun 'mult
+                                        'lhs
+                                        (fun 'rhs
+                                             (ifB (nought? (id 'rhs))
+                                                  (num 0)
+                                                  (add (id 'lhs)
+                                                       (app (app (id 'mult) (id 'lhs))
+                                                            (add (id 'rhs) (num -1)))))))
+                                (app (app (id '*) (num 20)) (num 3))))
+              (numV 60))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Parsing
@@ -689,60 +593,32 @@
 ;; - <any other s-expression>
 ;; interp.  any s-expression, focusing on those that represent TFA expressions.
 
-#;
-(define (fn-for-tfafs tfafs)
-  (match tfafs
-    [`,n
-     #:when (number? n)
-     (... n)]
-    [`{+ ,tfafs1 ,tfafs2}
-     (... (fn-for-tfafs tfafs1)
-          (fn-for-tfafs tfafs2))]
-    [`{nought? ,tfafs1}
-     (... (fn-for-tfafs tfafs1))]
-    [`,b
-     #:when (boolean? b)
-     (... b)]
-    [`{ifB ,tfafs1 ,tfafs2 ,tfafs3}
-     (... (fn-for-tfafs tfafs1)
-          (fn-for-tfafs tfafs2)
-          (fn-for-tfafs tfafs3))]
-    [`{andB ,tfafs1 ,tfafs2}
-     (... (fn-for-tfafs tfafs1)
-          (fn-for-tfafs tfafs2))]     
-    [`{notB ,tfafs1}
-     (... (fn-for-tfafs tfafs1))]
-    [`,x
-     #:when (tid? x)
-     (... x)]
-    [`{with {,x ,tfafs1} ,tfafs2}
-     (... x
-          (fn-for-tfafs tfafs1)
-          (fn-for-tfafs tfafs2))]
-    [`{,tfafs1 ,tfafs2}
-     (... (fn-for-tfafs tfafs1)
-          (fn-for-tfafs tfafs2))]
-    [`{fun {,x} ,tfafs1}
-     (... x
-          (fn-for-tfafs tfafs1))]
-    [`{fixFun ,f {,x} ,tfafs1}
-     (... f
-          x
-          (fn-for-tfafs tfafs1))]
-    [`{setobj ,tfafs1 ,tfafs2}
-     (... (fn-for-tfafs tfafs1)
-          (fn-for-tfafs tfafs2))]     
-    [`{array ,lotfafs}
-     (... (fn-for-lotfafs lotfafs))]
-    [`{aref ,tfafs1 ,tfafs2}
-     (... (fn-for-tfafs tfafs1)
-          (fn-for-tfafs tfafs2))]     
-    [`{seqn ,tfafs1 ,tfafs2}
-     (... (fn-for-tfafs tfafs1)
-          (fn-for-tfafs tfafs2))]     
-    [otherwise (...)]))
-
-
+#;(define (fn-for-tfafs tfafs)
+    (match tfafs
+      [`,n
+       #:when (number? n)
+       (... n)]
+      [`{+ ,tfafs1 ,tfafs2} (... (fn-for-tfafs tfafs1) (fn-for-tfafs tfafs2))]
+      [`{nought? ,tfafs1} (... (fn-for-tfafs tfafs1))]
+      [`,b
+       #:when (boolean? b)
+       (... b)]
+      [`{ifB ,tfafs1 ,tfafs2 ,tfafs3}
+       (... (fn-for-tfafs tfafs1) (fn-for-tfafs tfafs2) (fn-for-tfafs tfafs3))]
+      [`{andB ,tfafs1 ,tfafs2} (... (fn-for-tfafs tfafs1) (fn-for-tfafs tfafs2))]
+      [`{notB ,tfafs1} (... (fn-for-tfafs tfafs1))]
+      [`,x
+       #:when (tid? x)
+       (... x)]
+      [`{with {,x ,tfafs1} ,tfafs2} (... x (fn-for-tfafs tfafs1) (fn-for-tfafs tfafs2))]
+      [`{,tfafs1 ,tfafs2} (... (fn-for-tfafs tfafs1) (fn-for-tfafs tfafs2))]
+      [`{fun {,x} ,tfafs1} (... x (fn-for-tfafs tfafs1))]
+      [`{fixFun ,f {,x} ,tfafs1} (... f x (fn-for-tfafs tfafs1))]
+      [`{setobj ,tfafs1 ,tfafs2} (... (fn-for-tfafs tfafs1) (fn-for-tfafs tfafs2))]
+      [`{array ,lotfafs} (... (fn-for-lotfafs lotfafs))]
+      [`{aref ,tfafs1 ,tfafs2} (... (fn-for-tfafs tfafs1) (fn-for-tfafs tfafs2))]
+      [`{seqn ,tfafs1 ,tfafs2} (... (fn-for-tfafs tfafs1) (fn-for-tfafs tfafs2))]
+      [otherwise (...)]))
 
 ;; LOTFAFS is one of;
 ;; - '{}
@@ -750,15 +626,11 @@
 ;; - <any other s-expression>
 ;; interp.  Any s-expression, focused on lists of TFAFS
 
-#;
-(define (fn-for-lotfafs lotfafs)
-  (match lotfafs
-    [`{} (...)]
-    [`{,tfafs . ,lotfafs} (... (fn-for-tfafs tfafs)
-                               (fn-for-lotfafs lotfafs))]
-    [otherwise (...)]))
-
-
+#;(define (fn-for-lotfafs lotfafs)
+    (match lotfafs
+      [`{} (...)]
+      [`{,tfafs . ,lotfafs} (... (fn-for-tfafs tfafs) (fn-for-lotfafs lotfafs))]
+      [otherwise (...)]))
 
 ;; TFAFS -> TFA
 ;; parse the given s-expression into a TFA expression
@@ -768,48 +640,24 @@
     [`,n
      #:when (number? n)
      (num n)]
-    [`{+ ,tfafs1 ,tfafs2}
-     (add (parse/tfa tfafs1)
-          (parse/tfa tfafs2))]
-    [`{nought? ,tfafs1}
-     (nought? (parse/tfa tfafs1))]
+    [`{+ ,tfafs1 ,tfafs2} (add (parse/tfa tfafs1) (parse/tfa tfafs2))]
+    [`{nought? ,tfafs1} (nought? (parse/tfa tfafs1))]
     [`,b
      #:when (boolean? b)
      (bool b)]
-    [`{ifB ,tfafs1 ,tfafs2 ,tfafs3}
-     (ifB (parse/tfa tfafs1)
-          (parse/tfa tfafs2)
-          (parse/tfa tfafs3))]
-    [`{andB ,tfafs1 ,tfafs2}
-     (andB (parse/tfa tfafs1)
-           (parse/tfa tfafs2))]     
-    [`{notB ,tfafs1}
-     (notB (parse/tfa tfafs1))]
+    [`{ifB ,tfafs1 ,tfafs2 ,tfafs3} (ifB (parse/tfa tfafs1) (parse/tfa tfafs2) (parse/tfa tfafs3))]
+    [`{andB ,tfafs1 ,tfafs2} (andB (parse/tfa tfafs1) (parse/tfa tfafs2))]
+    [`{notB ,tfafs1} (notB (parse/tfa tfafs1))]
     [`,x
      #:when (tid? x)
      (id x)]
-    [`{with {,x ,tfafs1} ,tfafs2}
-     (with x
-           (parse/tfa tfafs1)
-           (parse/tfa tfafs2))]
-    [`{,tfafs1 ,tfafs2}
-     (app (parse/tfa tfafs1)
-          (parse/tfa tfafs2))]
-    [`{fun {,x} ,tfafs1}
-     (fun x
-          (parse/tfa tfafs1))]
-    [`{fixFun ,f {,x} ,tfafs1}
-     (fixFun f
-             x
-             (parse/tfa tfafs1))]
-    [`{setobj ,tfafs1 ,tfafs2}
-     (setobj (parse/tfa tfafs1)
-             (parse/tfa tfafs2))]     
-    [`{seqn ,tfafs1 ,tfafs2}
-     (seqn (parse/tfa tfafs1)
-           (parse/tfa tfafs2))]     
+    [`{with {,x ,tfafs1} ,tfafs2} (with x (parse/tfa tfafs1) (parse/tfa tfafs2))]
+    [`{,tfafs1 ,tfafs2} (app (parse/tfa tfafs1) (parse/tfa tfafs2))]
+    [`{fun {,x} ,tfafs1} (fun x (parse/tfa tfafs1))]
+    [`{fixFun ,f {,x} ,tfafs1} (fixFun f x (parse/tfa tfafs1))]
+    [`{setobj ,tfafs1 ,tfafs2} (setobj (parse/tfa tfafs1) (parse/tfa tfafs2))]
+    [`{seqn ,tfafs1 ,tfafs2} (seqn (parse/tfa tfafs1) (parse/tfa tfafs2))]
     [otherwise (error/311 'parse/tfa "Bad TFA expression: ~a" tfafs)]))
-
 
 ;; LOTFAFS -> (listof TFA)
 ;; parse lotfafs as a list of TFA expressions
@@ -818,34 +666,20 @@
   (match lotfafs
     [`{} '()]
     [`{,tfafs . ,lotfafs} (cons (parse/tfa tfafs) (parse-lotfa lotfafs))]
-    [otherwise
-     (error/311 'parse/tfa "Bad list of TFA expressions: ~a" lotfafs)]))
+    [otherwise (error/311 'parse/tfa "Bad list of TFA expressions: ~a" lotfafs)]))
 
+(check-match (parse/tfa WAES4)
+             (app (fixFun g1 'x (app (fixFun g2 'y (add (id 'y) (id 'y))) (add (id 'x) (num -3))))
+                  (add (num 5) (num 5))))
 
-(check-match
- (parse/tfa WAES4)
- (app (fixFun g1 'x (app (fixFun g2 'y (add (id 'y) (id 'y)))
-                         (add (id 'x) (num -3))))
-      (add (num 5) (num 5))))
+(check-match (parse/tfa WAES5)
+             (app (fixFun g1 'x (add (id 'x) (app (fixFun g2 'x (num 10)) (num 3)))) (num 5)))
 
-(check-match
- (parse/tfa WAES5)
- (app (fixFun g1 'x (add (id 'x)
-                         (app (fixFun g2 'x (num 10)) (num 3))))
-      (num 5)))
+(check-match (parse/tfa WAES6)
+             (app (fixFun g1 'x (add (id 'x) (app (fixFun g2 'x (id 'x)) (num 3)))) (num 5)))
 
-(check-match
- (parse/tfa WAES6)
- (app (fixFun g1 'x (add (id 'x) (app (fixFun g2 'x (id 'x))
-                                      (num 3))))
-      (num 5)))
-
-(check-match
- (parse/tfa WAES7)
- (app (fixFun g1 'x (add (id 'x) (app (fixFun g2 'y (id 'x))
-                                      (num 3))))
-      (num 5)))
-
+(check-match (parse/tfa WAES7)
+             (app (fixFun g1 'x (add (id 'x) (app (fixFun g2 'y (id 'x)) (num 3)))) (num 5)))
 
 ;;
 ;; PUTTING IT ALL TOGETHER  - an interpreter of files on disk
@@ -855,144 +689,94 @@
 ;; produce the result of interpreting the HG program in input
 ;; EFFECT: signals an error if interpretation signals a runtime error.
 (define (interp-sexp pgm)
-  (interp/tfa
-   (parse/tfa
-    pgm)))
+  (interp/tfa (parse/tfa pgm)))
 
-(check-equal? (interp-sexp '{with {f {fixFun x {y} {seqn {setobj x 7} x}}}
-                          {f 2}})
-      (numV 7))
-
+(check-equal? (interp-sexp '{with {f {fixFun x {y} {seqn {setobj x 7} x}}} {f 2}}) (numV 7))
 
 (check-equal? (interp-sexp '{ifB #t 7 9}) (numV 7))
 
 (check-exn/311 (interp-sexp '{ifB 7 #t 9}) "Bad Boolean")
 
-(check-equal? (interp-sexp
-       '{with {x #t}
-              {ifB x 7 9}})
-      (numV 7))
+(check-equal? (interp-sexp '{with {x #t} {ifB x 7 9}}) (numV 7))
 
-(check-exn/311 (interp-sexp
-           '{with {x 7}
-                  {ifB x #t 9}})
-          "Bad Boolean")
+(check-exn/311 (interp-sexp '{with {x 7} {ifB x #t 9}}) "Bad Boolean")
 
-(check-exn/311 (interp-sexp
-           '{with {a {fun {b} b}}
-                  {nought? a}})
-          "Bad number")
+(check-exn/311 (interp-sexp '{with {a {fun {b} b}} {nought? a}}) "Bad number")
 
-(check-equal? (interp-sexp
-       '{with {a 5}
-              {with {b 6}
-                    {with {c {ifB #t a b}}
-                          {seqn {setobj c 7}
-                                a}}}})
-      (numV 7))
+(check-equal? (interp-sexp '{with {a 5} {with {b 6} {with {c {ifB #t a b}} {seqn {setobj c 7} a}}}})
+              (numV 7))
 
+(check-equal?
+ (interp-sexp '{with {a 5} {with {f {fun {b} a}} {with {c {f 6}} {seqn {setobj c 7} a}}}})
+ (numV 7))
 
-(check-equal? (interp-sexp
-       '{with {a 5}
-              {with {f {fun {b} a}}
-                    {with {c {f 6}}
-                          {seqn {setobj c 7}
-                                a}}}})
-      (numV 7))
+(check-equal?
+ (interp-sexp '{with
+                {f {fun {a} {fun {b} a}}}
+                {with {g {f 9}} {with {d {g 2}} {with {c {g 3}} {seqn {setobj c 7} d}}}}})
+ (numV 7))
 
-(check-equal? (interp-sexp
-       '{with {f {fun {a} {fun {b} a}}}
-              {with {g {f 9}}
-                    {with {d {g 2}}
-                          {with {c {g 3}}
-                                {seqn {setobj c 7}
-                                      d}}}}})
-      (numV 7))
+(check-equal? (interp-sexp '{with {a 5} {with {b 6} {seqn {setobj {ifB #t a b} 7} a}}}) (numV 7))
 
-(check-equal? (interp-sexp
-       '{with {a 5}
-              {with {b 6}
-                    {seqn {setobj {ifB #t a b} 7}
-                          a}}})
-      (numV 7))
+(check-equal? (interp-sexp '{with
+                             {f {fun {a} {fun {b} a}}}
+                             {with {g {f 9}} {with {d {g 2}} {seqn {setobj {g 3} 7} d}}}})
+              (numV 7))
 
-(check-equal? (interp-sexp
-       '{with {f {fun {a} {fun {b} a}}}
-              {with {g {f 9}}
-                    {with {d {g 2}}
-                          {seqn {setobj {g 3} 7}
-                                d}}}})
-      (numV 7))
-
-(check-exn/311 (interp-sexp
-           '{with {f {fun {a} 6}}
-                  {seqn {setobj {f 2} 7}
-                        12}})
-          "Bad L-Value")
-
-
+(check-exn/311 (interp-sexp '{with {f {fun {a} 6}} {seqn {setobj {f 2} 7} 12}}) "Bad L-Value")
 
 ;; String -> Value
 ;; produce the result of interpreting the HG program in input
 ;; EFFECT: signals an error if interpretation signals a runtime error.
 (define (interp-string pgm)
-  (interp/tfa
-   (parse/tfa
-    (read-from-string pgm))))
-
+  (interp/tfa (parse/tfa (read-from-string pgm))))
 
 ;; String -> Value
 ;; produce the result of interpreting the HG stored in the file fname
 ;; EFFECT: signals an error if no file fname contains an AE representation
 ;;         or if interpretation signals a runtime error.
 (define (interp-file fname)
-  (interp/tfa
-   (parse/tfa
-    (read-from-file fname))))
+  (interp/tfa (parse/tfa (read-from-file fname))))
 
-(check-equal? (with-temporary-data-file "{+ 3 7}\n"
-        (lambda (fname) (interp-file fname)))
-      (numV 10))
+(check-equal? (with-temporary-data-file "{+ 3 7}\n" (lambda (fname) (interp-file fname))) (numV 10))
 
-(check-equal? (with-temporary-data-file "{+ {+ 3 -4} 7}\n"
-        (lambda (fname) (interp-file fname)))
-      (numV 6))
+(check-equal? (with-temporary-data-file "{+ {+ 3 -4} 7}\n" (lambda (fname) (interp-file fname)))
+              (numV 6))
 
 (check-equal? (with-temporary-data-file "{with {x 5} {+ x {with {y 3} x}}}"
-        (lambda (fname) (interp-file fname)))
-      (numV 10))
+                                        (lambda (fname) (interp-file fname)))
+              (numV 10))
 
+(check-equal? (with-temporary-data-file "{with {double {fun {x} {+ x x}}} {with {x 5} {double x}}}"
+                                        (lambda (fname) (interp-file fname)))
+              (numV 10))
 
-(check-equal? (with-temporary-data-file
-          "{with {double {fun {x} {+ x x}}} {with {x 5} {double x}}}"
-        (lambda (fname) (interp-file fname)))
-      (numV 10))
-
-
-(check-equal? (with-temporary-data-file
-          "{with {* {fixFun mult {lhs} {fun {rhs}
+(check-equal?
+ (with-temporary-data-file
+  "{with {* {fixFun mult {lhs} {fun {rhs}
                                 {ifB {nought? rhs}
                                      0
                                      {+ lhs {{mult lhs} {+ rhs -1}}}}}}}
              {{* 20} 3}}"
-        (lambda (fname) (interp-file fname)))
-      (numV 60))
+  (lambda (fname) (interp-file fname)))
+ (numV 60))
 
-(check-equal? (with-temporary-data-file
-          "{with {* {fixFun mult {lhs} {fun {rhs}
+(check-equal?
+ (with-temporary-data-file
+  "{with {* {fixFun mult {lhs} {fun {rhs}
                                 {ifB {nought? rhs}
                                      0
                                      {+ lhs {{mult lhs} {+ rhs -1}}}}}}}
              {{* 20} 3}}"
-        (lambda (fname) (interp-file fname)))
-      (numV 60))
+  (lambda (fname) (interp-file fname)))
+ (numV 60))
 
-
-(check-equal? (with-temporary-data-file
-          "{with {x 5}
+(check-equal?
+ (with-temporary-data-file
+  "{with {x 5}
        {with {y x}
              {seqn {setobj y 7}
                    x}}}
 "
-        (lambda (fname) (interp-file fname)))
-      (numV 7)) ;; Call-by-reference: 7
+  (lambda (fname) (interp-file fname)))
+ (numV 7)) ;; Call-by-reference: 7

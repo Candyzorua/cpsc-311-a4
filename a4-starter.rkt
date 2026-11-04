@@ -506,6 +506,27 @@
 (define RV4 (boolV #f))
 (define RV5 (boolV #t))
 
+;; RValue -> Number
+;; Effect: signal error unless rv is a number
+(define (rvalue->num rv)
+  (type-case RValue rv
+    [numV (n) n]
+    [else (error/311 'interp/tfa "Bad number: ~a" rv)]))
+
+;; RValue -> Boolean
+;; Effect: signal error unless rv is a boolean
+(define (rvalue->bool rv)
+  (type-case RValue rv
+    [boolV (b) b]
+    [else (error/311 'interp/tfa "Bad Boolean: ~a" rv)]))
+
+;; RValue -> RValue
+;; Effect: signal error unless rv is a function
+(define (rvalue->fun rv)
+  (type-case RValue rv
+    [funV (param body env) rv]
+    [else (error/311 'interp/tfa "Bad function: ~a" rv)]))
+
 #;
 (define (fn-for-rvalue v)
   (type-case RValue v
@@ -546,19 +567,59 @@
                       (list l (update-store store l rv)))]
     [rValueCtxt () (list rv store)]))
 
+;; Number Env lValueCtxt Store -> (list LValue Store)
+;; and
+;; Number Env lValueCtxt Store -> (list LValue Store)
+;; and
+;; Number Env lValueCtxt Store -> (list RValue Store)
+(define (num/tfa n env ectxt store)
+  (coerce-rvalue ectxt (numV n) store))
 
+;; (RValue RValue -> RValue)
+;; sum the numbers represented by v1 and v2
+;; Effect: signal an error if either argument does not represent a number
+(define (add-rvalue v1 v2)
+  (let ([n1 (rvalue->num v1)]
+        [n2 (rvalue->num v2)])
+    (numV (+ n1 n2))))
 
-;; helper function names for your design:
-;; (comment these out as you design them.
-(define add/tfa (void)) ; stub
+;; TFA TFA Env lValueCtxt Store -> (list LValue Store)
+;; and
+;; TFA TFA Env lValueCtxt Store -> (list LValue Store)
+;; and
+;; TFA TFA Env lValueCtxt Store -> (list RValue Store)
+(define (add/tfa l r env ectxt store)
+   (match-let*
+     [`(,v1 ,store1) (interp/tfa-acc l env (rValueCtxt) store)]
+     [`(,v2 ,store2) (interp/tfa-acc r env (rValueCtxt) store1)]
+        (coerce-rvalue ectxt (add-rvalue v1 v2) store2)))
+  
 (define nought?/tfa (void)) ; stub
 (define apply/tfa (void)) ; stub
 (define fixFun/tfa (void)) ;stub
 (define setobj/tfa (void)) ; stub
-(define interp/tfa-acc (void)) ; stub
 
-;; You are encouraged to design additional helpers as needed.
-
+;; TFA Env lValueCtxt Store -> (list LValue Store)
+;; and
+;; TFA Env bindingCtxt Store -> (list LValue Store)
+;; and
+;; TFA Env rValueCtxt Store -> (list RValue Store)
+(define (interp/tfa-acc tfa env ectxt store) 
+  (type-case TFA tfa
+    [num (n) (num/tfa n env ectxt store)]
+    [add (l r) (add/tfa n env ectxt store)]
+    [nought? (e) (... (fn-for-tfa e))]
+    [bool (b) (... b)]
+    [ifB (p c a)
+         (... (fn-for-tfa p)
+              (fn-for-tfa c)
+              (fn-for-tfa a))]
+    [id (x) (... x)]
+    [setobj (l r) (... (fn-for-tfa l)
+                       (fn-for-tfa r))]
+    [fixFun (f x body) (... f x (fn-for-tfa body))]
+    [app (rator rand) (... (fn-for-tfa rator)
+                           (fn-for-tfa rand))]))
 
 ;; Note: id/tfa has *three signatures*, one for each possible
 ;; result context value, since the result type may vary
@@ -584,6 +645,7 @@
 ;; interpret the given TFA expression
 ;; EFFECTS: Signals an error in case of runtime type error.
 (define (interp/tfa tfa) (numV 9)) ; stub for the examples
+
 
 
 

@@ -468,6 +468,9 @@
              [bindingCtxt () (let ([l (gensym)]) (list l (update-store store l rv)))]
              [rValueCtxt () (list rv store)]))
 
+(define test-env (extend-env empty-env 'x 'lx))
+(define test-store (update-store empty-store 'lx (numV 5)))
+
 ;; Number Env lValueCtxt Store -> (list LValue Store)
 ;; and
 ;; Number Env bindingCtxt Store -> (list LValue Store)
@@ -475,6 +478,9 @@
 ;; Number Env rValueCtxt Store -> (list RValue Store)
 (define (num/tfa n env ectxt store)
   (coerce-rvalue ectxt (numV n) store))
+(check-equal? (num/tfa 3 empty-env (rValueCtxt) empty-store)
+              (list (numV 3) empty-store))
+(check-exn/311 (num/tfa 3 empty-env (lValueCtxt) empty-store) "Bad L-Value")
 
 ;; Boolean Env lValueCtxt Store -> (list LValue Store)
 ;; and
@@ -483,6 +489,9 @@
 ;; Boolean Env rValueCtxt Store -> (list RValue Store)
 (define (bool/tfa b env ectxt store)
   (coerce-rvalue ectxt (boolV b) store))
+(check-equal? (bool/tfa #f empty-env (rValueCtxt) empty-store)
+              (list (boolV #f) empty-store))
+(check-exn/311 (bool/tfa #t empty-env (lValueCtxt) empty-store) "Bad L-Value")
 
 ;; (RValue RValue -> RValue)
 ;; sum the numbers represented by v1 and v2
@@ -490,6 +499,8 @@
   (let ([n1 (rvalue->num v1)]
         [n2 (rvalue->num v2)])
     (numV (+ n1 n2))))
+(check-equal? (add-rvalue (numV 2) (numV 3)) (numV 5))
+(check-exn/311 (add-rvalue (numV 2) (boolV #f)) "Bad number")
 
 ;; TFA TFA Env lValueCtxt Store -> (list LValue Store)
 ;; and
@@ -509,30 +520,6 @@
 (define (nought?/tfa e env ectxt store)
   (match-let ([`(,v1 ,store1) (interp/tfa-acc e env (rValueCtxt) store)])
     (coerce-rvalue ectxt (boolV (zero? (rvalue->num v1))) store1)))
-
-;; TFA TFA Env lValueCtxt Store -> (list LValue Store)
-;; and
-;; TFA TFA Env bindingCtxt Store -> (list LValue Store)
-;; and
-;; TFA TFA Env rValueCtxt Store -> (list RValue Store)
-(define (apply/tfa rator rand env ectxt store)
-  (match-let* ([`(,vrator ,store1) (interp/tfa-acc rator env (rValueCtxt) store)]
-               [`(,vrand ,store2) (interp/tfa-acc rand env (bindingCtxt) store1)]
-               [(funV param body closure-env) (rvalue->fun vrator)]
-               [extended-env (extend-env closure-env param vrand)])
-    (interp/tfa-acc body extended-env ectxt store2)))
-
-;; Symbol Symbol TFA Env lValueCtxt Store -> (list LValue Store)
-;; and
-;; Symbol Symbol TFA Env bindingCtxt Store -> (list LValue Store)
-;; and
-;; Symbol Symbol TFA Env rValueCtxt Store -> (list RValue Store)
-(define (fixFun/tfa f x body env ectxt store)
-  (let* ([newloc (gensym)]
-         [extended-env (extend-env env f newloc)]
-         [closure (funV x body extended-env)]
-         [store1 (update-store store newloc closure)])
-    (coerce-rvalue ectxt closure store1)))
 
 ;; TFA TFA TFA Env lValueCtxt Store -> (list LValue Store)
 ;; and
@@ -560,6 +547,30 @@
                [bindingCtxt () (list loc store)]
                [rValueCtxt () (list (lookup-store store loc) store)])))
 
+;; TFA TFA Env lValueCtxt Store -> (list LValue Store)
+;; and
+;; TFA TFA Env bindingCtxt Store -> (list LValue Store)
+;; and
+;; TFA TFA Env rValueCtxt Store -> (list RValue Store)
+(define (apply/tfa rator rand env ectxt store)
+  (match-let* ([`(,vrator ,store1) (interp/tfa-acc rator env (rValueCtxt) store)]
+               [`(,vrand ,store2) (interp/tfa-acc rand env (bindingCtxt) store1)]
+               [(funV param body closure-env) (rvalue->fun vrator)]
+               [extended-env (extend-env closure-env param vrand)])
+    (interp/tfa-acc body extended-env ectxt store2)))
+
+;; Symbol Symbol TFA Env lValueCtxt Store -> (list LValue Store)
+;; and
+;; Symbol Symbol TFA Env bindingCtxt Store -> (list LValue Store)
+;; and
+;; Symbol Symbol TFA Env rValueCtxt Store -> (list RValue Store)
+(define (fixFun/tfa f x body env ectxt store)
+  (let* ([newloc (gensym)]
+         [extended-env (extend-env env f newloc)]
+         [closure (funV x body extended-env)]
+         [store1 (update-store store newloc closure)])
+    (coerce-rvalue ectxt closure store1)))
+
 (define (setobj/tfa l r env store ectxt)
   (match-let* ([`(,vl ,store1) (interp/tfa-acc l env (lValueCtxt) store)]
                [`(,vr ,store2) (interp/tfa-acc r env (rValueCtxt) store1)]
@@ -567,11 +578,6 @@
                [store3 (update-store store2 vl vr)])
     (coerce-rvalue ectxt orig-vl-value store3)))
 
-;; TFA Env lValueCtxt Store -> (list LValue Store)
-;; and
-;; TFA Env bindingCtxt Store -> (list LValue Store)
-;; and
-;; TFA Env rValueCtxt Store -> (list RValue Store)
 (define (interp/tfa-acc tfa env ectxt store)
   (type-case TFA
              tfa
@@ -585,12 +591,73 @@
              [fixFun (f x body) (fixFun/tfa f x body env ectxt store)]
              [app (rator rand) (apply/tfa rator rand env ectxt store)]))
 
+
+(check-equal? (interp/tfa-acc (num 7) empty-env (rValueCtxt) empty-store)
+              (list (numV 7) empty-store))
+(check-exn/311 (interp/tfa-acc (num 7) empty-env (lValueCtxt) empty-store)
+               "Bad L-Value")
+
+(check-equal? (nought?/tfa (num 0) empty-env (rValueCtxt) empty-store)
+              (list (boolV #t) empty-store))
+
+(check-equal? (nought?/tfa (num 2) empty-env (rValueCtxt) empty-store)
+              (list (boolV #f) empty-store))
+
+(check-exn/311 (nought?/tfa (bool #f) empty-env (rValueCtxt) empty-store)
+               "Bad number")
+
+(check-equal? (ifB/tfa (bool #t) (num 1) (num 2) empty-env (rValueCtxt) empty-store)
+              (list (numV 1) empty-store))
+
+(check-equal? (ifB/tfa (bool #f) (num 1) (num 2) empty-env (rValueCtxt) empty-store)
+              (list (numV 2) empty-store))
+
+(check-exn/311 (ifB/tfa (num 0) (num 1) (num 2) empty-env (rValueCtxt) empty-store)
+               "Bad Boolean")
+
+(check-equal? (id/tfa 'x test-env test-store (lValueCtxt)) (list 'lx test-store))
+
+(check-equal? (id/tfa 'x test-env test-store (bindingCtxt)) (list 'lx test-store))
+
+(check-equal? (id/tfa 'x test-env test-store (rValueCtxt)) (list (numV 5) test-store))
+
+(check-equal? (first (apply/tfa (fun 'p (id 'p)) (num 4)
+                               empty-env (rValueCtxt) empty-store))
+              (numV 4))
+
+(check-equal? (first (apply/tfa (fun 'p (id 'p)) (id 'x)
+                               test-env (bindingCtxt) test-store))
+              'lx)
+
+(check-exn/311 (apply/tfa (num 1) (num 2) empty-env (rValueCtxt) empty-store)
+               "Bad function")
+
+(match-let* ([(list closure new-store)
+              (fixFun/tfa 'f 'p (id 'p) empty-env (rValueCtxt) empty-store)]
+             [(funV param body closure-env) closure])
+  (check-equal? param 'p)
+  (check-eq? (lookup-store new-store (lookup-env closure-env 'f)) closure))
+
+(check-exn/311 (fixFun/tfa 'f 'p (id 'p) empty-env (lValueCtxt) empty-store)
+               "Bad L-Value")
+
+(match-let ([(list old-value new-store)
+             (setobj/tfa (id 'x) (num 8) test-env test-store (rValueCtxt))])
+  (check-equal? old-value (numV 5))
+  (check-equal? (lookup-store new-store 'lx) (numV 8)))
+
+(check-exn/311 (setobj/tfa (num 1) (num 8) test-env test-store (rValueCtxt))
+               "Bad L-Value")
+
 ;; TFA -> RValue
 ;; interpret the given TFA expression
 ;; EFFECTS: Signals an error in case of runtime type error.
 (define (interp/tfa tfa)
   (match-let* ([`(,v^ ,store^) (interp/tfa-acc tfa empty-env (rValueCtxt) empty-store)])
     v^))
+(check-equal? (interp/tfa (add (num 2) (num 3))) (numV 5))
+(check-equal? (interp/tfa (with 'x (num 5) (id 'x))) (numV 5))
+(check-exn/311 (interp/tfa (id 'missing)) "Unbound variable")
 
 ;; Using the built-in recursion
 (check-equal? (interp/tfa (with '*
